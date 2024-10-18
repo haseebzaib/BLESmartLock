@@ -1,0 +1,41 @@
+Data exchange packet structure
+
+| Field                 | Description                    | Size(Bytes)
+------------------------------------------------------------------------
+| Uniquie ID            | MCU unique ID                  | 8           |
+| Data Type             | Type of Data                   | 1           |    (optional)
+| counter(IV)           | InitializationVector generated | 16          |
+|                       | by encryption differently each |             |
+|                       | time                           |             |
+| CipherText            | Encrypted Data using AES-CTR   | Variable    |
+| CipherLength          | Length of encrypted Data       | 2           |
+------------------------------------------------------------------------
+
+
+
+Another form of Packet
+
+| Field                 | Description                    | Size(Bytes)
+------------------------------------------------------------------------
+| counter(IV)           | InitializationVector generated | 16          |
+|                       | by encryption differently each |             |
+|                       | time . Without this system     |             |
+|                       | cant decrypt data              |             |
+| CipherText            | Encrypted Data using AES-CTR   | Variable    |
+| CipherLength          | Length of encrypted Data       | 2           |
+------------------------------------------------------------------------
+
+                                      
+                          | CipherText |
+    This packet will be included in cipher text encrypted completely 
+
+| Field                 | Description                    | Size(Bytes)
+------------------------------------------------------------------------
+| Uniquie ID            | Lock unique ID                 | 8           |
+| Data Type             | Type of Data                   | 1           |    (optional)
+| Message               | Message or Data                | Variable    |
+| MessageLength         | Length of  Data                | 2           |    (optional)
+------------------------------------------------------------------------
+
+
+

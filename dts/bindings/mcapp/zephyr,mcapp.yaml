@@ -1,0 +1,14 @@
+description: Motor control
+
+compatible: "zephyr,mcapp"
+
+include: base.yaml
+
+properties:
+  pwms:
+    required: true
+    type: phandle-array
+    description: PWM specifier for driving the motor
+  
+
+

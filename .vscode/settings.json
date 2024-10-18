@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "devicetree.h": "c",
+        "gpio.h": "c",
+        "stddef.h": "c",
+        "dk_buttons_and_leds.h": "c",
+        "gatt.h": "c",
+        "uuid.h": "c",
+        "app_defines.h": "c",
+        "log.h": "c",
+        "hci.h": "c",
+        "kernel.h": "c",
+        "cryptoapp.h": "c",
+        "typeinfo": "c",
+        "pwm.h": "c",
+        "mcapp.h": "c",
+        "sensor.h": "c"
+    }
+}
