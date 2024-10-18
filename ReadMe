@@ -1,19 +1,4 @@
-Data exchange packet structure
-
-| Field                 | Description                    | Size(Bytes)
-------------------------------------------------------------------------
-| Uniquie ID            | MCU unique ID                  | 8           |
-| Data Type             | Type of Data                   | 1           |    (optional)
-| counter(IV)           | InitializationVector generated | 16          |
-|                       | by encryption differently each |             |
-|                       | time                           |             |
-| CipherText            | Encrypted Data using AES-CTR   | Variable    |
-| CipherLength          | Length of encrypted Data       | 2           |
-------------------------------------------------------------------------
-
-
-
-Another form of Packet
+Pattern for AES-CTR encryption
 
 | Field                 | Description                    | Size(Bytes)
 ------------------------------------------------------------------------
@@ -36,6 +21,9 @@ Another form of Packet
 | Message               | Message or Data                | Variable    |
 | MessageLength         | Length of  Data                | 2           |    (optional)
 ------------------------------------------------------------------------
+
+
+
 
 
 

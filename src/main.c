@@ -70,6 +70,9 @@ LOCAL void configure_dk_buttons_leds(void)
 		LOG_ERR("Cannot init LEDs (err: %d)", err);
 	}
 }
+
+
+
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
