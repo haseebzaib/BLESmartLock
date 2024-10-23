@@ -11,6 +11,7 @@ src/main.c
 src/BLE/BLEapp.c
 src/crypto/cryptoapp.c
 src/motorcontrol/mcapp.c
+src/System/bib.c
 )
 
 
@@ -20,4 +21,5 @@ target_include_directories(app PRIVATE
   src/BLE
   src/crypto
   src/motorcontrol
+  src/System
 )

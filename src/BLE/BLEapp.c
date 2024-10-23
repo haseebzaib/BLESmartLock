@@ -33,7 +33,7 @@ LOCAL struct bt_lock_service_cb {
 };
 
 
-static uint8_t mfg_data[] = { 0xDE, 0xAD, 0xBE, 0xEF,0xAA,0x1A,0x2A,0xDE, 0xAD, 0xBE };
+static uint8_t mfg_data[] = { 0xDE, 0xAD, 0xBE, 0xEF,0xAA,0x1A,0x2A,0xDE, 0x01, 0x16 };
 LOCAL const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
     BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
@@ -48,6 +48,15 @@ LOCAL struct bt_conn_cb bluetooth_callbacks = {
     .connected = on_connected,
     .disconnected = on_disconnected,
 };
+
+
+void mtu_updated(struct bt_conn *conn, uint16_t tx, uint16_t rx)
+{
+	LOG_INF("Updated MTU: TX: %d RX: %d bytes\n", tx, rx);
+}
+
+
+static struct bt_gatt_cb gatt_callbacks = {.att_mtu_updated = mtu_updated};
 
 LOCAL struct bt_lock_service_cb lock_callbacks = {
 	//.notif_changed = on_notif_changed,
@@ -95,21 +104,19 @@ void on_disconnected(struct bt_conn *conn, uint8_t reason)
 
 void on_data_received(struct bt_conn *conn, const uint8_t *const data, uint16_t len)
 {
-	uint8_t temp_str[len+1];
-	memcpy(temp_str, data, len);
-	temp_str[len] = 0x00;
+
+	memcpy(app_pack_.BlemsgBuf, data, len);
+    app_pack_.BlemsgBuf[len] = 0x00;
+    app_pack_.BlemsgLength = len;
 
 	LOG_INF("Received data on conn %p. Len: %d", (void *)conn, len);
-	LOG_INF("Data: %s", temp_str);
+    LOG_HEXDUMP_INF(app_pack_.BlemsgBuf,len,"Content:");
 
-    if(strstr(temp_str, "0x02"))
-    {
-          APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_UNLOCK);
-    }
-    else if(strstr(temp_str, "0x01"))
-    {
-          APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_LOCK);
-    }
+    
+     if(app_pack_.BlemsgBuf[0] == SOH)
+     {
+           APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_MSG_RECV);
+     }
 
 
 }
@@ -118,6 +125,7 @@ void on_data_received(struct bt_conn *conn, const uint8_t *const data, uint16_t 
 /* File local functions */
 LOCAL void bt_ready(int err)
 {
+    bt_gatt_cb_register(&gatt_callbacks);
    err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
         LOG_ERR("Couldn't start advertising (err = %d)", err);

@@ -3,6 +3,10 @@
 
 #include "app_defines.h"
 
+
+
+
+
 /**
  * @brief Max size of event queue
  *
@@ -18,6 +22,7 @@ enum BLEapp_event_type
 
     BLE_APP_EVENT_LOCK = 1 ,
 	BLE_APP_EVENT_UNLOCK,
+    BLE_APP_EVENT_MSG_RECV,
 
 };
 

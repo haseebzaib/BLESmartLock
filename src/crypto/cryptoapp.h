@@ -12,9 +12,9 @@ enum cryptoapp_status {
 
 
 enum cryptoapp_func {
-  cryptoapp_impKeyndEncrypt = 0,
+  cryptoapp_impKeyndEncrypt = 0, //get key from somewhere and encrypt data
   cryptoapp_impKeyndDecrypt,
-  cryptoapp_genKeyndEncrypt,
+  cryptoapp_genKeyndEncrypt, //gen key and encrypt data
   cryptoapp_genKeyndDecrypt,
 };
 

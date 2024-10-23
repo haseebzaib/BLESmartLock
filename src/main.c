@@ -4,12 +4,19 @@
 #include <zephyr/drivers/sensor.h>
 #include <stdio.h>
 #include "motorcontrol/mcapp.h"
+#include "System/bib.h"
 
 LOG_MODULE_REGISTER(APPLICATION, LOG_LEVEL_DBG);
 
 uint8_t buffer[50];
 
-GLOBAL struct application_packet app_pack_;
+union byte_2byte {
+	uint16_t L;
+	uint8_t B[2];
+};
+union byte_2byte com_conv_;
+
+GLOBAL struct application_packet app_pack_ = {NULL};
 
 /* Configurations */
 
@@ -71,8 +78,6 @@ LOCAL void configure_dk_buttons_leds(void)
 	}
 }
 
-
-
 static const char *now_str(void)
 {
 	static char buf[16]; /* ...HH:MM:SS.MMM */
@@ -114,12 +119,14 @@ static int process_mpu6050(const struct device *dev)
 	return rc;
 }
 
-uint8_t msgbuffer[128];
-uint8_t encrpt_buffer[128];
-uint8_t decrpt_buffer[128];
+uint8_t msgbuffer[500];
+uint8_t encrpt_buffer[500];
+uint8_t decrpt_buffer[500];
+
 uint8_t iv_buffer[16] = {
-	0xcf, 0x6f, 0x5b, 0x6c, 0x61, 0x3d, 0x9e, 0xac,
-	0x46, 0x68, 0x02, 0x83, 0x58, 0x70, 0x6f, 0x8a};
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+
 uint8_t key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28,
 				   0xae, 0xd2, 0xa6, 0xab, 0xf7,
 				   0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
@@ -127,45 +134,20 @@ uint8_t key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28,
 int main(void)
 {
 	LOG_INF("SmartLock Started...");
-	// configure_dk_buttons_leds();
+
+
+
+
+		const struct device *const adxl345 = DEVICE_DT_GET_ONE(adi_adxl345);
+
+	if (!device_is_ready(adxl345)) {
+		LOG_INF("Device %s is not ready\n", adxl345->name);
+		//return 0;
+	}
 
 	BLEapp_init();
-	// struct cryptoapp_packet crypto_runtime_packet = {
-	// 	.key = key,
-	// 	.key_size = sizeof(key),
-	// 	.iv_buffer = iv_buffer,
-	// 	.iv_size = sizeof(iv_buffer),
-	// 	.msgBuf = msgbuffer,
-	// 	.msgBuf_size = sizeof(msgbuffer),
-	// 	.encryptedMsgBuf = encrpt_buffer,
-	// 	.encryptedMsgBuf_size = sizeof(encrpt_buffer),
-	// 	.decryptedMsgBuf = decrpt_buffer,
-	// 	.decryptedMsgBuf_size = sizeof(decrpt_buffer),
-	// };
-
-	// strcpy(msgbuffer, "hello world encrypted now");
-	// encrpt_buffer[0] = 0x4C;
-	// encrpt_buffer[1] = 0xBC;
-	// encrpt_buffer[2] = 0x36;
-	// encrpt_buffer[3] = 0x8D;
-	// encrpt_buffer[4] = 0x99;
-	// encrpt_buffer[5] = 0x1D;
-	// encrpt_buffer[6] = 0x46;
-	// crypto_runtime_packet.encryptedMsgBuf_size = 7;
-	// crypto_runtime_packet.decryptedMsgBuf_size = 7;
-
-	// cryptoapp_run(cryptoapp_impKeyndDecrypt, &crypto_runtime_packet);
-
-	//	const struct device *const adxl345 = DEVICE_DT_GET_ONE(adi_adxl345);
-
-	// if (!device_is_ready(adxl345)) {
-	// 	LOG_INF("Device %s is not ready\n", adxl345->name);
-	// 	return 0;
-	// }
-
 	mcapp_init();
 
-	// mcapp_speedDirection(mcapp_forward,800);
 	while (1)
 	{
 		// int rc = process_mpu6050(adxl345);
@@ -177,6 +159,7 @@ int main(void)
 
 		case BLE_APP_EVENT_LOCK:
 		{
+				LOG_INF("Lock system");
 			mcapp_speedDirection(mcapp_forward, 800);
 			k_msleep(1000);
 			mcapp_speedDirection(mcapp_forward, 0);
@@ -185,9 +168,167 @@ int main(void)
 
 		case BLE_APP_EVENT_UNLOCK:
 		{
+			LOG_INF("unLock system");
 			mcapp_speedDirection(mcapp_backward, 800);
 			k_msleep(1000);
 			mcapp_speedDirection(mcapp_backward, 0);
+			break;
+		}
+
+		case BLE_APP_EVENT_MSG_RECV:
+		{
+			LOG_INF("BLE MEssage Received");
+
+			if (!bib_parseMainMsg(app_pack_.BlemsgBuf, app_pack_.BlemsgLength, app_pack_.BLEivBuf, app_pack_.BLEencryptBuf, &app_pack_.BLEencryptBufLen))
+			{
+				LOG_HEXDUMP_INF(app_pack_.BLEivBuf, 16, "IV counter:");
+
+				LOG_INF("CipherLength: %d", app_pack_.BLEencryptBufLen);
+				LOG_HEXDUMP_INF(app_pack_.BLEencryptBuf, app_pack_.BLEencryptBufLen, "Encryptbuf:");
+
+				struct cryptoapp_packet BlemsgCrypto = {
+					.key = key,
+					.key_size = sizeof(key),
+					.iv_buffer = app_pack_.BLEivBuf,
+					.iv_size = 16,
+					.encryptedMsgBuf = app_pack_.BLEencryptBuf,
+					.encryptedMsgBuf_size = app_pack_.BLEencryptBufLen,
+					.decryptedMsgBuf = app_pack_.BLEdecryptBuf,
+					.decryptedMsgBuf_size = app_pack_.BLEencryptBufLen,
+				};
+
+				cryptoapp_run(cryptoapp_impKeyndDecrypt, &BlemsgCrypto);
+				
+				if(!bib_parseInnerMsg(app_pack_.BLEdecryptBuf,app_pack_.BLEencryptBufLen
+				    ,app_pack_.uniqueId,&app_pack_.datatype,&app_pack_.msgid
+					,app_pack_.Data,&app_pack_.dataLen))
+				{
+
+					LOG_HEXDUMP_INF(app_pack_.uniqueId, 8, "UniqueId:");
+					LOG_INF("DataType : %d" , app_pack_.datatype);
+					LOG_INF("MessageId: %d", app_pack_.msgid);
+					LOG_INF("Data len : %d", app_pack_.dataLen);
+					LOG_HEXDUMP_INF(app_pack_.Data, app_pack_.dataLen, "Data:");
+
+
+					if(app_pack_.msgid == 0x01)
+					{
+                      APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_LOCK);
+					}
+					else if(app_pack_.msgid == 0x02)
+					{
+                      APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_UNLOCK);
+					}
+
+
+                      /*Sending Ack/Nack*/
+					  uint16_t len = 0;
+					  app_pack_.msgBuf[0] = STX;
+					  len++;
+
+					  for(int i = 0; i< 8 ; i++)
+					  {
+						app_pack_.msgBuf[i+1] = app_pack_.uniqueId[i];
+						len++;
+					  }
+
+					  app_pack_.msgBuf[9] = EM;
+					  len++;
+					  app_pack_.msgBuf[10] = ACKNACK;
+					  len++;
+					  app_pack_.msgBuf[11] = EM;
+					  len++;
+					  app_pack_.msgBuf[12] = ACK;
+					  len++;
+					  app_pack_.msgBuf[13] = EM;
+					  len++;
+					  app_pack_.msgBuf[14] = NUL;
+					  len++;
+					  app_pack_.msgBuf[15] = EM;
+					  len++;
+					  app_pack_.msgBuf[16] = 0x00;
+					  len++;
+					  app_pack_.msgBuf[17] = 0x00;
+					  len++;
+					  app_pack_.msgBuf[18] = ETX;
+					  len++;
+					  app_pack_.msgBuf[19] = EOT;
+					  len++;
+
+
+				struct cryptoapp_packet TxmsgCrypto = {
+					.key = key,
+					.key_size = sizeof(key),
+					.iv_buffer = app_pack_.TxivBuf,
+					.iv_size = 16,
+					.msgBuf = app_pack_.msgBuf,
+					.msgBuf_size = len,
+					.encryptedMsgBuf = app_pack_.TxEnCryptMsg,
+					.encryptedMsgBuf_size = len,
+				};
+
+				cryptoapp_run(cryptoapp_impKeyndEncrypt, &TxmsgCrypto);
+
+				app_pack_.TxCpltMsgLen = 0;
+				app_pack_.TxCpltMsg[0] = SOH;
+				app_pack_.TxCpltMsgLen++;
+				for(int i = 0; i < 16 ; i++ )
+				{
+					app_pack_.TxCpltMsg[i+1] = app_pack_.TxivBuf[i];
+					app_pack_.TxCpltMsgLen++;
+				}
+				app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EM;
+				app_pack_.TxCpltMsgLen++;
+
+				for(int i = 0; i < len ; i++ )
+				{
+					app_pack_.TxCpltMsg[i+1+17] = app_pack_.TxEnCryptMsg[i];
+					app_pack_.TxCpltMsgLen++;
+				}
+
+				app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EM;
+				app_pack_.TxCpltMsgLen++;
+
+				com_conv_.L = len;
+
+				app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = com_conv_.B[1];
+				app_pack_.TxCpltMsgLen++;
+				app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = com_conv_.B[0];
+				app_pack_.TxCpltMsgLen++;
+
+				app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EOT;
+				app_pack_.TxCpltMsgLen++;
+
+
+
+
+				LOG_HEXDUMP_INF(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen, "Tx Data content:");
+
+		        send_lock_notification_text(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen);
+
+
+					 
+
+				}
+
+				else
+				{
+                    /*To Do */
+
+				}
+
+			}
+			else
+			{
+
+				/*To do*/
+			}
+			break;
+		}
+
+		default:
+		{
+
 			break;
 		}
 		}
