@@ -12,6 +12,7 @@ src/BLE/BLEapp.c
 src/crypto/cryptoapp.c
 src/motorcontrol/mcapp.c
 src/System/bib.c
+src/System/sys_flash.c
 )
 
 

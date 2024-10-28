@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "motorcontrol/mcapp.h"
 #include "System/bib.h"
+#include "System/sys_flash.h"
 
 LOG_MODULE_REGISTER(APPLICATION, LOG_LEVEL_DBG);
 
@@ -131,6 +132,8 @@ uint8_t key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28,
 				   0xae, 0xd2, 0xa6, 0xab, 0xf7,
 				   0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
 
+uint8_t flashKey[16] = {0};
+
 int main(void)
 {
 	LOG_INF("SmartLock Started...");
@@ -144,9 +147,18 @@ int main(void)
 		LOG_INF("Device %s is not ready\n", adxl345->name);
 		//return 0;
 	}
-
+    sys_flash_init();
 	BLEapp_init();
 	mcapp_init();
+
+
+//sys_flash_erase(Priv_key,16);
+	sys_flash_write(Priv_key,(uint8_t *)key,Priv_Key_Size);
+
+
+	sys_flash_read(Priv_key,(uint8_t *)flashKey,Priv_Key_Size);
+
+	LOG_HEXDUMP_INF(flashKey, 16, "Flash Key:");
 
 	while (1)
 	{
