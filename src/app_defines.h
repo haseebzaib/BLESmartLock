@@ -67,6 +67,14 @@ enum commands {
 
 
 struct application_packet {
+    uint8_t lockUnlockStatus;
+    uint8_t batteryPercentage;
+    
+
+
+
+
+
     uint8_t BlemsgBuf[255];
     uint16_t BlemsgLength;
     uint8_t BLEcryptoKey[16]; /*Priv Key*/
@@ -101,6 +109,9 @@ struct application_packet {
 
 
 };
+
+
+
 
 extern struct application_packet app_pack_; /*All the stuff related in application will be shared using this*/ 
 

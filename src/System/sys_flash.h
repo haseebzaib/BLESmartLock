@@ -22,6 +22,10 @@ enum sys_flash_status {
 #define Priv_key 0x00
 #define Priv_Key_Size 16
 
+
+#define lock_status_location 20
+#define lock_status_Size 1
+
 extern enum sys_flash_status sys_flash_erase(uint32_t offset,uint32_t size);
 extern enum sys_flash_status sys_flash_read(uint32_t offset,void *data,uint32_t size);
 extern enum sys_flash_status sys_flash_write(uint32_t offset,void *data,uint32_t size);
