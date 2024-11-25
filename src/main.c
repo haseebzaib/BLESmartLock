@@ -121,21 +121,7 @@ static int process_mpu6050(const struct device *dev)
 	return rc;
 }
 
-uint8_t msgbuffer[500];
-uint8_t encrpt_buffer[500];
-uint8_t decrpt_buffer[500];
 
-uint8_t iv_buffer[16] = {
-	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
-
-uint8_t key[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28,
-				   0xae, 0xd2, 0xa6, 0xab, 0xf7,
-				   0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
-
-uint8_t flashKey[16] = {0};
-
-uint8_t lock_unlock_status_store = 0; //extract from flash save in flash status of lock
 
 int main(void)
 {
@@ -155,7 +141,7 @@ int main(void)
 	// sys_flash_erase(Priv_key,16);
 	//sys_flash_write(Priv_key, (uint8_t *)key, Priv_Key_Size);
 
-	sys_flash_read(Priv_key, (uint8_t *)flashKey, Priv_Key_Size);
+	sys_flash_read(Priv_key, (uint8_t *)app_pack_.Key, Priv_Key_Size);
 	sys_flash_read(lock_status_location, &app_pack_.lockUnlockStatus, lock_status_Size);
 
 	if(app_pack_.lockUnlockStatus == 0xff)
@@ -165,7 +151,7 @@ int main(void)
 
 	app_pack_.batteryPercentage = 90;
 
-	LOG_HEXDUMP_INF(flashKey, 16, "Flash Key:");
+	LOG_HEXDUMP_INF(app_pack_.Key, 16, "Flash Key:");
 
 	while (1)
 	{
@@ -237,8 +223,8 @@ int main(void)
 			len++;
 
 				struct cryptoapp_packet TxmsgCrypto = {
-				.key = key,
-				.key_size = sizeof(key),
+				.key = app_pack_.Key,
+				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
 				.iv_size = 16,
 				.msgBuf = app_pack_.msgBuf,
@@ -324,8 +310,8 @@ int main(void)
 			len++;
 
 				struct cryptoapp_packet TxmsgCrypto = {
-				.key = key,
-				.key_size = sizeof(key),
+			    .key = app_pack_.Key,
+				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
 				.iv_size = 16,
 				.msgBuf = app_pack_.msgBuf,
@@ -436,8 +422,8 @@ int main(void)
 			len++;
 
 			struct cryptoapp_packet TxmsgCrypto = {
-				.key = key,
-				.key_size = sizeof(key),
+			.key = app_pack_.Key,
+				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
 				.iv_size = 16,
 				.msgBuf = app_pack_.msgBuf,
@@ -521,8 +507,8 @@ int main(void)
 			len++;
 
 			struct cryptoapp_packet TxmsgCrypto = {
-				.key = key,
-				.key_size = sizeof(key),
+			.key = app_pack_.Key,
+				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
 				.iv_size = 16,
 				.msgBuf = app_pack_.msgBuf,
@@ -581,8 +567,8 @@ int main(void)
 				LOG_HEXDUMP_INF(app_pack_.BLEencryptBuf, app_pack_.BLEencryptBufLen, "Encryptbuf:");
 
 				struct cryptoapp_packet BlemsgCrypto = {
-					.key = key,
-					.key_size = sizeof(key),
+			.key = app_pack_.Key,
+				.key_size = sizeof(app_pack_.Key),
 					.iv_buffer = app_pack_.BLEivBuf,
 					.iv_size = 16,
 					.encryptedMsgBuf = app_pack_.BLEencryptBuf,

@@ -26,11 +26,6 @@
 #define CONN_STATUS_LED DK_LED2
 #define RUN_LED_BLINK_INTERVAL 1000
 
-extern uint8_t msgbuffer[500];
-extern uint8_t encrpt_buffer[500];
-extern uint8_t decrpt_buffer[500];
-extern uint8_t iv_buffer[16];
-extern uint8_t key[16];
 
 
 enum commands {
@@ -67,6 +62,7 @@ enum commands {
 
 
 struct application_packet {
+    uint8_t Key[16];
     uint8_t lockUnlockStatus;
     uint8_t batteryPercentage;
     
