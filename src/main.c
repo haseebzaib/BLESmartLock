@@ -508,7 +508,7 @@ int main(void)
 			len++;
 			app_pack_.msgBuf[11] = EM;
 			len++;
-			app_pack_.msgBuf[12] = GETTIMEDATE;
+			app_pack_.msgBuf[12] = GETENCRYPTIONKEY;
 			len++;
 			app_pack_.msgBuf[13] = EM;
 			len++;
