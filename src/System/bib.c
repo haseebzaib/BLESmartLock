@@ -128,3 +128,49 @@ int8_t bib_parseInnerMsg(uint8_t *MainMsg,uint16_t MainMsgLen,uint8_t *UniqueId,
 return 0;
 }
 
+int8_t bib_parseTimeDateAndValidate(char* buffer,uint8_t *hour, uint8_t *minute, uint8_t *second, uint8_t *day, uint8_t *month, uint8_t *year)
+{
+
+   if (strlen(buffer) > 17) {
+       LOG_ERR("data length is bigger than it needs to be\n");
+        return -1; // Invalid length
+    }
+
+      // Validate the format
+    if (buffer[2] != ':' || buffer[5] != ':' || buffer[8] != '|' || buffer[11] != '/' || buffer[14] != '/') {
+           LOG_ERR("Invalid format of Data discarding it\n");
+        return -1; // Delimiters are not in the correct positions
+    }
+
+        // Check that all numeric positions contain valid digits
+    for (size_t i = 0; i < 17; ++i) {
+        if ((i == 2 || i == 5 || i == 8 || i == 11 || i == 14) && buffer[i] != ':' && buffer[i] != '|' && buffer[i] != '/') {
+            LOG_ERR("Invalid format of Data discarding it\n");
+            return -1; // Ensure delimiters are in the correct positions
+        } else if (i != 2 && i != 5 && i != 8 && i != 11 && i != 14) {
+            if (buffer[i] < '0' || buffer[i] > '9') {
+                LOG_ERR("Invalid digits in data\n");
+                return -1; // Invalid digit
+            }
+        }
+    }
+
+        // Parse the values into individual bytes
+    *hour = (buffer[0] - '0') * 10 + (buffer[1] - '0');
+    *minute = (buffer[3] - '0') * 10 + (buffer[4] - '0');
+    *second = (buffer[6] - '0') * 10 + (buffer[7] - '0');
+    *day = (buffer[9] - '0') * 10 + (buffer[10] - '0');
+    *month = (buffer[12] - '0') * 10 + (buffer[13] - '0');
+    *year = (buffer[15] - '0') * 10 + (buffer[16] - '0');
+
+    // Validate the ranges of the extracted values
+    if (*hour > 23 || *minute > 59 || *second > 59 || *day < 1 || *day > 31 || *month < 1 || *month > 12) {
+           LOG_ERR("Values out of range discarding it\n");
+        return -1; // Values out of range
+    }
+
+
+
+return 0;
+
+}

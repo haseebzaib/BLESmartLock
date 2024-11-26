@@ -121,8 +121,6 @@ static int process_mpu6050(const struct device *dev)
 	return rc;
 }
 
-
-
 int main(void)
 {
 	LOG_INF("SmartLock Started...");
@@ -139,14 +137,14 @@ int main(void)
 	mcapp_init();
 
 	// sys_flash_erase(Priv_key,16);
-	//sys_flash_write(Priv_key, (uint8_t *)key, Priv_Key_Size);
+	// sys_flash_write(Priv_key, (uint8_t *)key, Priv_Key_Size);
 
 	sys_flash_read(Priv_key, (uint8_t *)app_pack_.Key, Priv_Key_Size);
 	sys_flash_read(lock_status_location, &app_pack_.lockUnlockStatus, lock_status_Size);
 
-	if(app_pack_.lockUnlockStatus == 0xff)
+	if (app_pack_.lockUnlockStatus == 0xff)
 	{
-      app_pack_.lockUnlockStatus = 0x01;
+		app_pack_.lockUnlockStatus = 0x01;
 	}
 
 	app_pack_.batteryPercentage = 90;
@@ -180,7 +178,7 @@ int main(void)
 			mcapp_speedDirection(mcapp_backward, 800);
 			k_msleep(1000);
 			mcapp_speedDirection(mcapp_backward, 0);
-            app_pack_.lockUnlockStatus = 0x02;
+			app_pack_.lockUnlockStatus = 0x02;
 			sys_flash_write(lock_status_location, &app_pack_.lockUnlockStatus, lock_status_Size);
 			APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_ACK);
 			break;
@@ -222,7 +220,7 @@ int main(void)
 			app_pack_.msgBuf[19] = EOT;
 			len++;
 
-				struct cryptoapp_packet TxmsgCrypto = {
+			struct cryptoapp_packet TxmsgCrypto = {
 				.key = app_pack_.Key,
 				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
@@ -268,15 +266,15 @@ int main(void)
 			LOG_HEXDUMP_INF(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen, "Tx Data content:");
 
 			send_lock_notification_text(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen);
-		
 
 			break;
 		}
 
 		case BLE_APP_EVENT_BATTERY_LEVEL:
-		{LOG_INF("*******BATTERY LEVEL*******");
+		{
+			LOG_INF("*******BATTERY LEVEL*******");
 
-		uint16_t len = 0;
+			uint16_t len = 0;
 			app_pack_.msgBuf[0] = STX;
 			len++;
 
@@ -309,8 +307,8 @@ int main(void)
 			app_pack_.msgBuf[19] = EOT;
 			len++;
 
-				struct cryptoapp_packet TxmsgCrypto = {
-			    .key = app_pack_.Key,
+			struct cryptoapp_packet TxmsgCrypto = {
+				.key = app_pack_.Key,
 				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
 				.iv_size = 16,
@@ -356,30 +354,226 @@ int main(void)
 
 			send_lock_notification_text(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen);
 
-
 			break;
 		}
 
 		case BLE_APP_EVENT_SETTIMEDATE:
-		{LOG_INF("*******SET TIME DATE*******");
+		{
+			LOG_INF("*******SET TIME DATE*******");
+
+			if (bib_parseTimeDateAndValidate(app_pack_.Data, &app_pack_.hour, &app_pack_.min, &app_pack_.sec, &app_pack_.date, &app_pack_.month, &app_pack_.year) == 0)
+			{
+				APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_ACK);
+			}
+			else
+			{
+				APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_NACK);
+			}
 
 			break;
 		}
 
 		case BLE_APP_EVENT_SETENCRYPTKEY:
-		{LOG_INF("*******SET ENCRYPTION KEY*******");
+		{
+			LOG_INF("*******SET ENCRYPTION KEY*******");
 
+			cryptoapp_init();
+			if (cryptoapp_importKey(app_pack_.Data, app_pack_.dataLen) == cryptoapp_ok)
+			{
+				APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_ACK);
+				sys_flash_write(Priv_key, (uint8_t *)app_pack_.Data, Priv_Key_Size);
+
+				sys_flash_read(Priv_key, (uint8_t *)app_pack_.Key, Priv_Key_Size);
+			}
+			else
+			{
+				APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_NACK);
+			}
+			cryptoapp_finish();
 			break;
 		}
 
 		case BLE_APP_EVENT_GETTIMEDATE:
-		{LOG_INF("*******GET TIME DATE*******");
+		{
+			LOG_INF("*******GET TIME DATE*******");
+
+			uint16_t len = 0;
+
+			char timebuf[20];
+
+			sprintf(timebuf,"%02d:%02d:%02d|%02d/%02d/%02d",app_pack_.hour,app_pack_.min,app_pack_.sec
+			                                               ,app_pack_.date,app_pack_.month,app_pack_.year);
+			app_pack_.msgBuf[0] = STX;
+			len++;
+
+			for (int i = 0; i < 8; i++)
+			{
+				app_pack_.msgBuf[i + 1] = app_pack_.uniqueId[i];
+				len++;
+			}
+
+			app_pack_.msgBuf[9] = EM;
+			len++;
+			app_pack_.msgBuf[10] = CONFIG;
+			len++;
+			app_pack_.msgBuf[11] = EM;
+			len++;
+			app_pack_.msgBuf[12] = GETTIMEDATE;
+			len++;
+			app_pack_.msgBuf[13] = EM;
+			len++;
+	         for (int i = 14; i < 31; i++)
+			{
+				app_pack_.msgBuf[i] = timebuf[i - 14];
+				len++;
+			}
+			app_pack_.msgBuf[31] = EM;
+			len++;
+			app_pack_.msgBuf[32] = 0x00;
+			len++;
+			app_pack_.msgBuf[33] = 0x11;
+			len++;
+			app_pack_.msgBuf[34] = ETX;
+			len++;
+			app_pack_.msgBuf[35] = EOT;
+			len++;
+
+			struct cryptoapp_packet TxmsgCrypto = {
+				.key = app_pack_.Key,
+				.key_size = sizeof(app_pack_.Key),
+				.iv_buffer = app_pack_.TxivBuf,
+				.iv_size = 16,
+				.msgBuf = app_pack_.msgBuf,
+				.msgBuf_size = len,
+				.encryptedMsgBuf = app_pack_.TxEnCryptMsg,
+				.encryptedMsgBuf_size = len,
+			};
+
+			cryptoapp_run(cryptoapp_impKeyndEncrypt, &TxmsgCrypto);
+
+			app_pack_.TxCpltMsgLen = 0;
+			app_pack_.TxCpltMsg[0] = SOH;
+			app_pack_.TxCpltMsgLen++;
+			for (int i = 0; i < 16; i++)
+			{
+				app_pack_.TxCpltMsg[i + 1] = app_pack_.TxivBuf[i];
+				app_pack_.TxCpltMsgLen++;
+			}
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EM;
+			app_pack_.TxCpltMsgLen++;
+
+			for (int i = 0; i < len; i++)
+			{
+				app_pack_.TxCpltMsg[i + 1 + 17] = app_pack_.TxEnCryptMsg[i];
+				app_pack_.TxCpltMsgLen++;
+			}
+
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EM;
+			app_pack_.TxCpltMsgLen++;
+
+			com_conv_.L = len;
+
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = com_conv_.B[1];
+			app_pack_.TxCpltMsgLen++;
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = com_conv_.B[0];
+			app_pack_.TxCpltMsgLen++;
+
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EOT;
+			app_pack_.TxCpltMsgLen++;
+
+			LOG_HEXDUMP_INF(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen, "Tx Data content:");
+
+			send_lock_notification_text(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen);
 
 			break;
 		}
 
 		case BLE_APP_EVENT_GETENCRYPTKEY:
-		{LOG_INF("*******GET ENCRYPTION KEY*******");
+		{
+			LOG_INF("*******GET ENCRYPTION KEY*******");
+
+			uint16_t len = 0;
+			app_pack_.msgBuf[0] = STX;
+			len++;
+
+			for (int i = 0; i < 8; i++)
+			{
+				app_pack_.msgBuf[i + 1] = app_pack_.uniqueId[i];
+				len++;
+			}
+
+			app_pack_.msgBuf[9] = EM;
+			len++;
+			app_pack_.msgBuf[10] = CONFIG;
+			len++;
+			app_pack_.msgBuf[11] = EM;
+			len++;
+			app_pack_.msgBuf[12] = GETTIMEDATE;
+			len++;
+			app_pack_.msgBuf[13] = EM;
+			len++;
+	         for (int i = 14; i < 30; i++)
+			{
+				app_pack_.msgBuf[i] = app_pack_.Key[i - 14];
+				len++;
+			}
+			app_pack_.msgBuf[30] = EM;
+			len++;
+			app_pack_.msgBuf[31] = 0x00;
+			len++;
+			app_pack_.msgBuf[32] = 0x11;
+			len++;
+			app_pack_.msgBuf[33] = ETX;
+			len++;
+			app_pack_.msgBuf[34] = EOT;
+			len++;
+
+			struct cryptoapp_packet TxmsgCrypto = {
+				.key = app_pack_.Key,
+				.key_size = sizeof(app_pack_.Key),
+				.iv_buffer = app_pack_.TxivBuf,
+				.iv_size = 16,
+				.msgBuf = app_pack_.msgBuf,
+				.msgBuf_size = len,
+				.encryptedMsgBuf = app_pack_.TxEnCryptMsg,
+				.encryptedMsgBuf_size = len,
+			};
+
+			cryptoapp_run(cryptoapp_impKeyndEncrypt, &TxmsgCrypto);
+
+			app_pack_.TxCpltMsgLen = 0;
+			app_pack_.TxCpltMsg[0] = SOH;
+			app_pack_.TxCpltMsgLen++;
+			for (int i = 0; i < 16; i++)
+			{
+				app_pack_.TxCpltMsg[i + 1] = app_pack_.TxivBuf[i];
+				app_pack_.TxCpltMsgLen++;
+			}
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EM;
+			app_pack_.TxCpltMsgLen++;
+
+			for (int i = 0; i < len; i++)
+			{
+				app_pack_.TxCpltMsg[i + 1 + 17] = app_pack_.TxEnCryptMsg[i];
+				app_pack_.TxCpltMsgLen++;
+			}
+
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EM;
+			app_pack_.TxCpltMsgLen++;
+
+			com_conv_.L = len;
+
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = com_conv_.B[1];
+			app_pack_.TxCpltMsgLen++;
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = com_conv_.B[0];
+			app_pack_.TxCpltMsgLen++;
+
+			app_pack_.TxCpltMsg[app_pack_.TxCpltMsgLen] = EOT;
+			app_pack_.TxCpltMsgLen++;
+
+			LOG_HEXDUMP_INF(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen, "Tx Data content:");
+
+			send_lock_notification_text(app_pack_.TxCpltMsg, app_pack_.TxCpltMsgLen);
 
 			break;
 		}
@@ -422,7 +616,7 @@ int main(void)
 			len++;
 
 			struct cryptoapp_packet TxmsgCrypto = {
-			.key = app_pack_.Key,
+				.key = app_pack_.Key,
 				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
 				.iv_size = 16,
@@ -471,7 +665,8 @@ int main(void)
 		}
 
 		case BLE_APP_EVENT_NACK:
-		{LOG_INF("*******GENERATE NACK*******");
+		{
+			LOG_INF("*******GENERATE NACK*******");
 			/*Sending NAck*/
 			uint16_t len = 0;
 			app_pack_.msgBuf[0] = STX;
@@ -507,7 +702,7 @@ int main(void)
 			len++;
 
 			struct cryptoapp_packet TxmsgCrypto = {
-			.key = app_pack_.Key,
+				.key = app_pack_.Key,
 				.key_size = sizeof(app_pack_.Key),
 				.iv_buffer = app_pack_.TxivBuf,
 				.iv_size = 16,
@@ -567,8 +762,8 @@ int main(void)
 				LOG_HEXDUMP_INF(app_pack_.BLEencryptBuf, app_pack_.BLEencryptBufLen, "Encryptbuf:");
 
 				struct cryptoapp_packet BlemsgCrypto = {
-			.key = app_pack_.Key,
-				.key_size = sizeof(app_pack_.Key),
+					.key = app_pack_.Key,
+					.key_size = sizeof(app_pack_.Key),
 					.iv_buffer = app_pack_.BLEivBuf,
 					.iv_size = 16,
 					.encryptedMsgBuf = app_pack_.BLEencryptBuf,
