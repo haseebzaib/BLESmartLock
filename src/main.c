@@ -6,6 +6,7 @@
 #include "motorcontrol/mcapp.h"
 #include "System/bib.h"
 #include "System/sys_flash.h"
+#include <nrfx.h>
 
 LOG_MODULE_REGISTER(APPLICATION, LOG_LEVEL_DBG);
 
@@ -19,6 +20,11 @@ union byte_2byte
 union byte_2byte com_conv_;
 
 GLOBAL struct application_packet app_pack_ = {NULL};
+
+uint8_t key[16] = 
+{
+	0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
+};
 
 /* Configurations */
 
@@ -133,16 +139,28 @@ int main(void)
 		// return 0;
 	}
 	sys_flash_init();
-	BLEapp_init();
-	mcapp_init();
 
-	// sys_flash_erase(Priv_key,16);
-	// sys_flash_write(Priv_key, (uint8_t *)key, Priv_Key_Size);
+
+	 sys_flash_erase(Priv_key,16);
+	 sys_flash_write(Priv_key, (uint8_t *)key, Priv_Key_Size);
 
 	sys_flash_read(Priv_key, (uint8_t *)app_pack_.Key, Priv_Key_Size);
+
+    if(app_pack_.Key[0] == 0xff && app_pack_.Key[1] == 0xff && app_pack_.Key[2] == 0xff 
+	&& app_pack_.Key[3] == 0xff && app_pack_.Key[4] == 0xff && app_pack_.Key[5] == 0xff 
+	&& app_pack_.Key[6] == 0xff && app_pack_.Key[7] == 0xff && app_pack_.Key[8] == 0xff 
+	&& app_pack_.Key[9] == 0xff && app_pack_.Key[10] == 0xff && app_pack_.Key[11] == 0xff 
+	&& app_pack_.Key[12] == 0xff && app_pack_.Key[13] == 0xff && app_pack_.Key[14] == 0xff 
+	&& app_pack_.Key[15] == 0xff )
+	{
+		sys_flash_write(Priv_key, (uint8_t *)key, Priv_Key_Size);
+		sys_flash_read(Priv_key, (uint8_t *)app_pack_.Key, Priv_Key_Size);
+
+	}
+
 	sys_flash_read(lock_status_location, &app_pack_.lockUnlockStatus, lock_status_Size);
 
-	if (app_pack_.lockUnlockStatus == 0xff)
+	if (app_pack_.lockUnlockStatus == 0xff || app_pack_.lockUnlockStatus == 0x00)
 	{
 		app_pack_.lockUnlockStatus = 0x01;
 	}
@@ -151,11 +169,41 @@ int main(void)
 
 	LOG_HEXDUMP_INF(app_pack_.Key, 16, "Flash Key:");
 
+	 uint32_t device_id_low = NRF_FICR->DEVICEID[0];
+    uint32_t device_id_high = NRF_FICR->DEVICEID[1];
+
+    // Combine into an 8-byte ID
+    memcpy(&app_pack_.uniqueId[0], &device_id_low, 4);  // Copy low 4 bytes
+    memcpy(&app_pack_.uniqueId[4], &device_id_high, 4); // Copy high 4 bytes
+
+
+     LOG_HEXDUMP_INF(app_pack_.uniqueId, 8, "Unique 8-byte ID:");
+	 
+    app_pack_.mfg_data[0] = app_pack_.uniqueId[0];
+	app_pack_.mfg_data[1] = app_pack_.uniqueId[1];
+	app_pack_.mfg_data[2] = app_pack_.uniqueId[2];
+	app_pack_.mfg_data[3] = app_pack_.uniqueId[3];
+	app_pack_.mfg_data[4] = app_pack_.uniqueId[4];
+	app_pack_.mfg_data[5] = app_pack_.uniqueId[5];
+	app_pack_.mfg_data[6] = app_pack_.uniqueId[6];
+	app_pack_.mfg_data[7] = app_pack_.uniqueId[7];
+	app_pack_.mfg_data[8] = app_pack_.lockUnlockStatus;
+	app_pack_.mfg_data[9] = 99;
+
+	BLEapp_init();
+	mcapp_init();
+
 	while (1)
 	{
+
+
+
+
 		// int rc = process_mpu6050(adxl345);
 		struct BLEapp_event evt = {0};
-		BLEapp_event_manager_timed_get(&evt, K_MSEC(10000));
+		BLEapp_event_manager_timed_get(&evt, K_MSEC(1000));
+
+		BLEapp_loop(app_pack_.lockUnlockStatus,11);
 
 		switch (evt.type)
 		{
@@ -399,7 +447,7 @@ int main(void)
 
 			uint16_t len = 0;
 
-			char timebuf[20];
+			char timebuf[50];
 
 			sprintf(timebuf,"%02d:%02d:%02d|%02d/%02d/%02d",app_pack_.hour,app_pack_.min,app_pack_.sec
 			                                               ,app_pack_.date,app_pack_.month,app_pack_.year);
@@ -756,8 +804,12 @@ int main(void)
 
 			if (!bib_parseMainMsg(app_pack_.BlemsgBuf, app_pack_.BlemsgLength, app_pack_.BLEivBuf, app_pack_.BLEencryptBuf, &app_pack_.BLEencryptBufLen))
 			{
-				LOG_HEXDUMP_INF(app_pack_.BLEivBuf, 16, "IV counter:");
 
+              if(memcmp(app_pack_.BLEivBuf,app_pack_.BLEPrevivBuf,16) != 0)
+				{
+					memcpy(app_pack_.BLEPrevivBuf,app_pack_.BLEivBuf,16);
+				LOG_HEXDUMP_INF(app_pack_.BLEivBuf, 16, "IV counter:");
+				
 				LOG_INF("CipherLength: %d", app_pack_.BLEencryptBufLen);
 				LOG_HEXDUMP_INF(app_pack_.BLEencryptBuf, app_pack_.BLEencryptBufLen, "Encryptbuf:");
 
@@ -774,10 +826,12 @@ int main(void)
 
 				cryptoapp_run(cryptoapp_impKeyndDecrypt, &BlemsgCrypto);
 
-				if (!bib_parseInnerMsg(app_pack_.BLEdecryptBuf, app_pack_.BLEencryptBufLen, app_pack_.uniqueId, &app_pack_.datatype, &app_pack_.msgid, app_pack_.Data, &app_pack_.dataLen))
+				if (!bib_parseInnerMsg(app_pack_.BLEdecryptBuf, app_pack_.BLEencryptBufLen, app_pack_.BLEuniqueId, &app_pack_.datatype, &app_pack_.msgid, app_pack_.Data, &app_pack_.dataLen))
 				{
 
-					LOG_HEXDUMP_INF(app_pack_.uniqueId, 8, "UniqueId:");
+					LOG_HEXDUMP_INF(app_pack_.BLEuniqueId, 8, "UniqueId Recved:");
+					if(strcmp(app_pack_.BLEuniqueId, app_pack_.uniqueId) == 0 )
+					{
 					LOG_INF("DataType : %d", app_pack_.datatype);
 					LOG_INF("MessageId: %d", app_pack_.msgid);
 					LOG_INF("Data len : %d", app_pack_.dataLen);
@@ -880,20 +934,38 @@ int main(void)
 						break;
 					}
 					}
+					}
+					else
+					{
+	                      APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_NACK);
+					}
+				
+				
 				}
-
 				else
 				{
 					APP_EVENT_MANAGER_PUSH(BLE_APP_EVENT_NACK);
 				}
+			
+				}
+				else
+				{
+                     
+                    LOG_ERR("*****INTRUDER*****");
+				}
+			
 			}
 			else
 			{
 
 				/*To do*/
+
+				 LOG_ERR("Wrong Encryption, Therefore Discarding it");
 			}
 			break;
 		}
+
+		
 
 		default:
 		{

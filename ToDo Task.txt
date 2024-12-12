@@ -1,6 +1,2 @@
-1) Extract unique ID from smart lock and also put checks for it so lock always checks the unique id sent from app as well
-
-2) Need to make advertisement data from ble change on runtime
-
-3) Implement RTC code
+1) Implement RTC code
 

@@ -82,11 +82,13 @@ struct application_packet {
     uint8_t BlemsgBuf[255];
     uint16_t BlemsgLength;
     uint8_t BLEcryptoKey[16]; /*Priv Key*/
+    uint8_t BLEPrevivBuf[16];
     uint8_t BLEivBuf[16];     /*Counter buffer used in AES CTR*/
     uint8_t BLEencryptBuf[255];                  /*Encrypted Data Buffer*/
     uint8_t BLEdecryptBuf[255];                  /*Decrypted Data Buffer*/
     uint16_t BLEencryptBufLen;
     uint16_t BLEdecryptBufLen;
+    uint8_t BLEuniqueId[8];
 
 
      uint8_t uniqueId[8];

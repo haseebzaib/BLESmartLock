@@ -87,7 +87,7 @@ extern int BLEapp_event_manager_push(struct BLEapp_event *p_evt);
 extern int BLEapp_event_manager_get(struct BLEapp_event *p_evt);
 extern int BLEapp_event_manager_timed_get(struct BLEapp_event *p_evt, k_timeout_t timeout);
 
-extern void BLEapp_loop();
+extern void BLEapp_loop(uint8_t lockstatus,uint8_t batteryLevel);
 extern int BLEapp_init();
 
 

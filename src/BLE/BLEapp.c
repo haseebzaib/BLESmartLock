@@ -15,7 +15,7 @@ K_MSGQ_DEFINE(app_event_msq, sizeof(struct BLEapp_event), APP_EVENT_QUEUE_SIZE, 
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME)-1)
 
 
-LOCAL struct bt_conn *current_conn;
+LOCAL struct bt_conn * current_conn;
 
 /* Declarations */
 LOCAL void on_connected(struct bt_conn *conn, uint8_t err);
@@ -33,7 +33,7 @@ LOCAL struct bt_lock_service_cb {
 };
 
 
-static uint8_t mfg_data[] = { 0xDE, 0xAD, 0xBE, 0xEF,0xAA,0x1A,0x2A,0xDE, 0x01, 0x16 };
+static uint8_t mfg_data[10] = { 0xDE, 0xAD, 0xBE, 0xEF,0xAA,0x1A,0x2A,0xDE, 0x01, 0x16 };
 LOCAL const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
     BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
@@ -227,10 +227,15 @@ GLOBAL int BLEapp_event_manager_timed_get(struct BLEapp_event *p_evt, k_timeout_
     return k_msgq_get(&app_event_msq, p_evt, timeout);
 }
 
-GLOBAL void BLEapp_loop()
+GLOBAL void BLEapp_loop(uint8_t lockstatus,uint8_t batteryLevel)
 {
 
-       
+     if (!current_conn) { // Update only when not connected
+
+	        mfg_data[8] = lockstatus;
+	        mfg_data[9] = batteryLevel;
+            bt_le_adv_update_data(ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+        }
 
 
 }
@@ -242,6 +247,8 @@ GLOBAL int BLEapp_init()
     //mfg_data[3] = 0x00;
     int err;
    LOG_INF("Initializing bluetooth...");
+
+    strncpy(mfg_data,app_pack_.mfg_data,10);
 
     bt_conn_cb_register(&bluetooth_callbacks);
 
