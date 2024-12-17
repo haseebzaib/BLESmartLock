@@ -138,6 +138,12 @@ int main(void)
 		LOG_INF("Device %s is not ready\n", adxl345->name);
 		// return 0;
 	}
+
+	 const struct device *const aht20 = DEVICE_DT_GET_ONE(zephyr_aht20);
+    if (!device_is_ready(aht20)) {
+        LOG_ERR("AHT20 device not ready or not found");
+        //return;
+    }
 	sys_flash_init();
 
 
@@ -196,10 +202,17 @@ int main(void)
 	while (1)
 	{
 
-
-
-
 		// int rc = process_mpu6050(adxl345);
+
+		//  struct sensor_value temp, hum;
+
+        //     sensor_channel_get(aht20, SENSOR_CHAN_AMBIENT_TEMP, &temp);
+        //     sensor_channel_get(aht20, SENSOR_CHAN_HUMIDITY, &hum);
+
+        //     LOG_INF("Temperature: %d.%06d C, Humidity: %d.%06d %%", 
+        //             temp.val1, temp.val2, hum.val1, hum.val2);
+
+
 		struct BLEapp_event evt = {0};
 		BLEapp_event_manager_timed_get(&evt, K_MSEC(1000));
 

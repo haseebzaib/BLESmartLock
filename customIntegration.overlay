@@ -7,6 +7,11 @@
 		
 			//interrupts = < 27 26 >;
 		};
+
+       aht20@38 {
+        compatible = "zephyr,aht20";
+        reg = <0x38>;
+       };
 };
 
 

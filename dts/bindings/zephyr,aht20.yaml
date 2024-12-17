@@ -1,0 +1,13 @@
+description: AHT20 Temperature and Humidity Sensor over I2C
+
+compatible: "zephyr,aht20"
+
+include: [sensor-device.yaml, i2c-device.yaml ]
+
+
+# properties:
+#   reg:
+#     description: I2C address
+#     minimum: 0x38
+#     maximum: 0x38
+#     const: 0x38
