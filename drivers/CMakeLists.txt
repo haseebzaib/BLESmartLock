@@ -1,3 +1,0 @@
-
-
-add_subdirectory_ifdef(CONFIG_SENSOR_AHT20 aht20)

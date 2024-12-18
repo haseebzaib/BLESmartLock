@@ -1,14 +1,14 @@
 # File: drivers/sensor/aht20/Kconfig
 
-menuconfig SENSOR_AHT20
+menuconfig CUSTOM_AHT20
     bool "AHT20 Temperature and Humidity Sensor"
     select I2C
     help
       Enable the AHT20 sensor driver.
 
-if SENSOR_AHT20
+if CUSTOM_AHT20
 
-config SENSOR_AHT20_LOG_LEVEL
+config CUSTOM_AHT20_LOG_LEVEL
     int "Log level for AHT20 driver"
     default 3
     depends on LOG

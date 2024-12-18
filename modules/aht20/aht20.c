@@ -2,7 +2,7 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(aht20, CONFIG_SENSOR_AHT20_LOG_LEVEL);
+LOG_MODULE_REGISTER(aht20, CONFIG_CUSTOM_AHT20_LOG_LEVEL);
 
 struct aht20_data {
 	const struct device *i2c;

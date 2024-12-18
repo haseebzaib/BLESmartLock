@@ -139,11 +139,11 @@ int main(void)
 		// return 0;
 	}
 
-	 const struct device *const aht20 = DEVICE_DT_GET_ONE(zephyr_aht20);
-    if (!device_is_ready(aht20)) {
-        LOG_ERR("AHT20 device not ready or not found");
-        //return;
-    }
+	//  const struct device * aht20_ = DEVICE_DT_GET_ONE(zephyr_aht20);
+    // if (!device_is_ready(aht20_)) {
+    //     LOG_ERR("AHT20 device not ready or not found");
+    //     //return;
+    // }
 	sys_flash_init();
 
 

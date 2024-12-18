@@ -1,2 +1,11 @@
 1) Implement RTC code
 
+2) AHT20 driver not implemented correctly fix it
+
+3) Test motor driver
+
+4) Ask about led light features and implement it
+
+5) implement simple nfc functionality. 
+
+

@@ -11,6 +11,7 @@
        aht20@38 {
         compatible = "zephyr,aht20";
         reg = <0x38>;
+        label = "AHT20";
        };
 };
 
