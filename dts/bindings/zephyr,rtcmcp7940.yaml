@@ -1,0 +1,16 @@
+description: Microchip I2C based RTC 
+
+compatible: "zephyr,rtcmcp7940"
+
+include: [ i2c-device.yaml ]
+
+
+properties: 
+  int-gpios:
+    type: phandle-array
+    description: |
+      Host input connect to MCP7940 MFP open drain output pin
+      
+      Notifies when an alarm has triggered by asserting this line
+
+

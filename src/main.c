@@ -7,6 +7,7 @@
 #include "System/bib.h"
 #include "System/sys_flash.h"
 #include <nrfx.h>
+#include "RTCmcp7940.h"
 
 LOG_MODULE_REGISTER(APPLICATION, LOG_LEVEL_DBG);
 
@@ -144,6 +145,13 @@ int main(void)
         LOG_ERR("AHT20 device not ready or not found");
         //return;
     }
+
+
+		 const struct device *const RTC_MCP = DEVICE_DT_GET_ONE(zephyr_rtcmcp7940);
+    if (!device_is_ready(RTC_MCP)) {
+        LOG_ERR("RTC device not ready or not found");
+        //return;
+    }
 	sys_flash_init();
 
 
@@ -199,6 +207,8 @@ int main(void)
 	BLEapp_init();
 	mcapp_init();
 
+	RTCmcp7940_set_time(RTC_MCP,1734521409 );
+
 	while (1)
 	{
 
@@ -213,6 +223,12 @@ int main(void)
 
             LOG_INF("Temperature: %d.%06d C, Humidity: %d.%06d %%", 
                     temp.val1, temp.val2, hum.val1, hum.val2);
+
+
+ time_t time;
+		RTCmcp7940_get_time(RTC_MCP,&time);
+
+		    LOG_INF("Time in unix %ld",time);
 
 
 		struct BLEapp_event evt = {0};

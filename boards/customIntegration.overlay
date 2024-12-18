@@ -13,6 +13,12 @@
         reg = <0x38>;
         label = "AHT20";
        };
+
+       rtcmcp7940@6F {
+        compatible = "zephyr,rtcmcp7940";
+        reg = <0x6F>;
+        label = "RTC";
+       };
 };
 
 
